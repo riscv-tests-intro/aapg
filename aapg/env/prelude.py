@@ -52,7 +52,6 @@ _start:
 
   # enable FPU and accelerator if present
   li t0, MSTATUS_FS | MSTATUS_XS
-  csrs mstatus, t0
 
   # make sure XLEN agrees with compilation choice
   li t0, 1
@@ -71,7 +70,6 @@ _start:
 #ifdef __riscv_flen
   # initialize FPU if we have one
   la t0, 1f
-  csrw mtvec, t0
 
   fssr    x0
   FMV  f0, x1
@@ -112,16 +110,13 @@ _start:
 
   # initialize trap vector
   la t0, trap_entry
-  csrw mtvec, t0
 
   la  tp, _end + 63
   and tp, tp, -64
 
   # get core id
-  csrr a0, mhartid
   # for now, assume only 1 core
   li a1, 1
-1:bgeu a0, a1, 1b
 
   # give each core 128KB of stack + TLS
 #define STKSHIFT 17
@@ -169,8 +164,6 @@ trap_entry:
   SREG x30, 30*REGBYTES(sp)
   SREG x31, 31*REGBYTES(sp)
 
-  csrr a0, mcause                 # copy the mcause to register a0.
-  csrr a1, mepc                   # copy the mepc to register a1.
   lhu  a2, 0(a1)                  # load instruction into reg a1.
 
   # check the lower 2 bits to see if the instruction is 32-bit or 16-bit.
@@ -186,13 +179,11 @@ inst16:
   addi a1,a1,0x2                  # is 16-bit instruction then increment by 2
 
 1: 
-  csrw mepc, a1                   # point mepc to the next instruction.
 
   # use mcause to update the number of exceptions encountered in the program.
 
   # Remain in M-mode after eret
   li t0, MSTATUS_MPP
-  csrs mstatus, t0
 
   LREG x1, 1*REGBYTES(sp)
   LREG x2, 2*REGBYTES(sp)
